@@ -10,6 +10,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "local": "node start-local.js",
     "db:init": "node scripts/initDatabase.js",
     "deploy:render": "node deploy-to-render.js",
     "test:db": "node test-db-connection.js",
