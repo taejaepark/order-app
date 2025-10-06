@@ -15,7 +15,7 @@ function StockManagement({ stocks, onIncrease, onDecrease }) {
         {stocks.map(stock => {
           const status = getStockStatus(stock.stock)
           return (
-            <div key={stock.id} className="stock-card">
+            <div key={stock.menuId} className="stock-card">
               <div className="stock-info">
                 <h3 className="stock-menu-name">{stock.menuName}</h3>
                 <div className="stock-quantity">
@@ -28,14 +28,14 @@ function StockManagement({ stocks, onIncrease, onDecrease }) {
               <div className="stock-controls">
                 <button 
                   className="stock-btn decrease"
-                  onClick={() => onDecrease(stock.id)}
+                  onClick={() => onDecrease(stock.menuId)}
                   disabled={stock.stock === 0}
                 >
                   -
                 </button>
                 <button 
                   className="stock-btn increase"
-                  onClick={() => onIncrease(stock.id)}
+                  onClick={() => onIncrease(stock.menuId)}
                 >
                   +
                 </button>

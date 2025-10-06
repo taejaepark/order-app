@@ -52,7 +52,7 @@
 
 .cart-item {
   display: flex;
-  justify-content: space-between;
+  flex-direction: row;
   align-items: center;
   padding: 0.75rem 0;
   border-bottom: 1px solid #f0f0f0;
@@ -73,29 +73,99 @@
 .cart-item-name {
   color: #333;
   font-size: 0.95rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 500;
 }
 
 .cart-item-options {
   color: #666;
   font-size: 0.85rem;
-}
-
-.cart-item-quantity {
-  color: #666;
-  margin-left: 0.5rem;
-  white-space: nowrap;
+  font-weight: normal;
 }
 
 .cart-item-price {
-  font-weight: 500;
-  color: #333;
+  font-weight: 700;
+  color: #007bff;
   white-space: nowrap;
-  min-width: 80px;
+  min-width: 90px;
   text-align: right;
   font-family: 'Courier New', monospace;
+  font-size: 1.05rem;
+}
+
+.quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #f8f9fa;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  flex-shrink: 0;
+}
+
+.quantity-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  border-radius: 4px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quantity-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+  transform: scale(1.1);
+}
+
+.quantity-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.quantity-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.quantity-display {
+  min-width: 30px;
+  text-align: center;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.remove-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #dc3545;
+  background-color: white;
+  color: #dc3545;
+  border-radius: 4px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.remove-btn:hover {
+  background-color: #dc3545;
+  color: white;
+  transform: scale(1.1);
+}
+
+.remove-btn:active {
+  transform: scale(0.95);
 }
 
 .cart-total {
@@ -175,8 +245,30 @@
     max-height: 120px;
   }
 
+  .cart-item {
+    flex-wrap: wrap;
+  }
+  
+  .cart-item-info {
+    flex: 1 1 100%;
+    margin-bottom: 0.5rem;
+  }
+  
   .cart-item-name {
     font-size: 0.9rem;
+  }
+  
+  .cart-item-price {
+    order: 3;
+    flex: 1;
+  }
+  
+  .quantity-controls {
+    order: 2;
+  }
+  
+  .remove-btn {
+    order: 4;
   }
 
   .cart-total-amount {

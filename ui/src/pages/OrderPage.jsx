@@ -1,62 +1,41 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import MenuCard from '../components/MenuCard'
 import Cart from '../components/Cart'
+import { menuAPI, optionAPI, orderAPI } from '../services/api'
 import './OrderPage.css'
 
-// 임시 메뉴 데이터
-const menuItems = [
-  {
-    id: 1,
-    name: '아메리카노(ICE)',
-    price: 4000,
-    description: '깔끔한 설명...',
-    image: 'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=400&h=300&fit=crop'
-  },
-  {
-    id: 2,
-    name: '아메리카노(HOT)',
-    price: 4000,
-    description: '깔끔한 설명...',
-    image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=300&fit=crop'
-  },
-  {
-    id: 3,
-    name: '카페라떼',
-    price: 5000,
-    description: '깔끔한 설명...',
-    image: 'https://images.unsplash.com/photo-1561882468-9110e03e0f78?w=400&h=300&fit=crop'
-  },
-  {
-    id: 4,
-    name: '카푸치노',
-    price: 5000,
-    description: '부드러운 우유 거품이 일품인 커피',
-    image: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400&h=300&fit=crop'
-  },
-  {
-    id: 5,
-    name: '바닐라라떼',
-    price: 5500,
-    description: '달콤한 바닐라 향이 가득한 라떼',
-    image: 'https://images.unsplash.com/photo-1542990253-0d0f5be5f0ed?w=400&h=300&fit=crop'
-  },
-  {
-    id: 6,
-    name: '카라멜 마키아또',
-    price: 5500,
-    description: '달콤한 카라멜과 에스프레소의 조화',
-    image: 'https://images.unsplash.com/photo-1570968915860-54d5c301fa9f?w=400&h=300&fit=crop'
-  }
-]
-
-// 옵션 데이터
-const options = [
-  { id: 1, name: '샷 추가', price: 500 },
-  { id: 2, name: '시럽 추가', price: 0 }
-]
-
 function OrderPage() {
+  const [menuItems, setMenuItems] = useState([])
+  const [options, setOptions] = useState([])
   const [cart, setCart] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // 메뉴와 옵션 데이터 로드
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        // 메뉴와 옵션 동시에 가져오기
+        const [menusResponse, optionsResponse] = await Promise.all([
+          menuAPI.getAllMenus(),
+          optionAPI.getAllOptions()
+        ])
+        
+        setMenuItems(menusResponse.data)
+        setOptions(optionsResponse.data)
+      } catch (err) {
+        setError(err.message)
+        console.error('데이터 로드 실패:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchData()
+  }, [])
 
   // 장바구니에 아이템 추가
   const addToCart = (menuItem, selectedOptions) => {
@@ -86,15 +65,105 @@ function OrderPage() {
     }
   }
 
+  // 장바구니 수량 증가
+  const increaseQuantity = (index) => {
+    const newCart = [...cart]
+    newCart[index].quantity += 1
+    setCart(newCart)
+  }
+
+  // 장바구니 수량 감소
+  const decreaseQuantity = (index) => {
+    const newCart = [...cart]
+    if (newCart[index].quantity > 1) {
+      newCart[index].quantity -= 1
+      setCart(newCart)
+    }
+  }
+
+  // 장바구니 아이템 삭제
+  const removeItem = (index) => {
+    const newCart = cart.filter((_, i) => i !== index)
+    setCart(newCart)
+  }
+
   // 주문하기
-  const handleOrder = () => {
+  const handleOrder = async () => {
     if (cart.length === 0) {
       alert('장바구니가 비어있습니다')
       return
     }
     
-    alert('주문이 완료되었습니다!')
-    setCart([])
+    try {
+      // 주문 데이터 준비
+      const orderData = {
+        items: cart.map(item => ({
+          menuId: item.menuId,
+          menuName: item.menuName,
+          basePrice: item.basePrice,
+          quantity: item.quantity,
+          options: item.options.map(opt => ({
+            optionId: opt.id,
+            optionName: opt.name,
+            optionPrice: opt.price
+          }))
+        })),
+        totalPrice: cart.reduce((sum, item) => {
+          const itemTotal = (item.basePrice + item.options.reduce((s, opt) => s + opt.price, 0)) * item.quantity
+          return sum + itemTotal
+        }, 0)
+      }
+      
+      // 서버에 주문 생성 요청
+      const response = await orderAPI.createOrder(orderData)
+      
+      alert(`주문이 완료되었습니다!\n주문번호: ${response.data.orderNumber}`)
+      setCart([])
+      
+      // 메뉴 재로드 (재고 업데이트 반영)
+      const menusResponse = await menuAPI.getAllMenus()
+      setMenuItems(menusResponse.data)
+    } catch (err) {
+      alert(`주문 실패: ${err.message}`)
+      console.error('주문 실패:', err)
+    }
+  }
+
+  // 로딩 상태
+  if (loading) {
+    return (
+      <div className="order-page">
+        <div style={{ textAlign: 'center', padding: '50px', fontSize: '1.2rem' }}>
+          메뉴를 불러오는 중...
+        </div>
+      </div>
+    )
+  }
+  
+  // 에러 상태
+  if (error) {
+    return (
+      <div className="order-page">
+        <div style={{ textAlign: 'center', padding: '50px', color: '#dc3545' }}>
+          <h3>데이터를 불러오는데 실패했습니다</h3>
+          <p>{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{ 
+              padding: '10px 20px', 
+              backgroundColor: '#007bff', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '5px',
+              cursor: 'pointer',
+              marginTop: '20px'
+            }}
+          >
+            다시 시도
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -113,6 +182,9 @@ function OrderPage() {
       <Cart 
         cart={cart}
         onOrder={handleOrder}
+        onIncreaseQuantity={increaseQuantity}
+        onDecreaseQuantity={decreaseQuantity}
+        onRemoveItem={removeItem}
       />
     </div>
   )

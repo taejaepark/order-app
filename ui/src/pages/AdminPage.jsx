@@ -1,98 +1,176 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Dashboard from '../components/Dashboard'
 import StockManagement from '../components/StockManagement'
 import OrderManagement from '../components/OrderManagement'
+import { stockAPI, orderAPI } from '../services/api'
 import './AdminPage.css'
 
 function AdminPage() {
-  // 임시 재고 데이터
-  const [stocks, setStocks] = useState([
-    { id: 1, menuName: '아메리카노 (ICE)', stock: 10 },
-    { id: 2, menuName: '아메리카노 (HOT)', stock: 3 },
-    { id: 3, menuName: '카페라떼', stock: 0 }
-  ])
+  const [stocks, setStocks] = useState([])
+  const [orders, setOrders] = useState([])
+  const [stats, setStats] = useState({
+    totalOrders: 0,
+    pendingOrders: 0,
+    inProgressOrders: 0,
+    completedOrders: 0
+  })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  // 임시 주문 데이터
-  const [orders, setOrders] = useState([
-    {
-      id: 1,
-      orderTime: '2025-10-06T13:00:00',
-      items: [
-        { menuName: '아메리카노(ICE)', options: ['샷 추가'], quantity: 1 }
-      ],
-      totalPrice: 4500,
-      status: 'pending' // pending, in_progress, completed
-    },
-    {
-      id: 2,
-      orderTime: '2025-10-06T13:15:00',
-      items: [
-        { menuName: '카페라떼', options: [], quantity: 2 }
-      ],
-      totalPrice: 10000,
-      status: 'pending'
-    },
-    {
-      id: 3,
-      orderTime: '2025-10-06T12:45:00',
-      items: [
-        { menuName: '아메리카노(HOT)', options: ['샷 추가', '시럽 추가'], quantity: 1 }
-      ],
-      totalPrice: 4500,
-      status: 'in_progress'
+  // 데이터 로드 함수
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      // 재고, 주문, 통계 동시에 가져오기
+      const [stocksResponse, ordersResponse, statsResponse] = await Promise.all([
+        stockAPI.getAllStocks(),
+        orderAPI.getAllOrders({ limit: 100 }),
+        orderAPI.getOrderStats()
+      ])
+      
+      setStocks(stocksResponse.data)
+      setOrders(ordersResponse.data)
+      setStats(statsResponse.data)
+    } catch (err) {
+      setError(err.message)
+      console.error('데이터 로드 실패:', err)
+    } finally {
+      setLoading(false)
     }
-  ])
+  }
+
+  // 초기 데이터 로드
+  useEffect(() => {
+    fetchData()
+  }, [])
 
   // 재고 증가
-  const increaseStock = (menuId) => {
-    setStocks(stocks.map(stock => 
-      stock.id === menuId ? { ...stock, stock: stock.stock + 1 } : stock
-    ))
+  const increaseStock = async (menuId) => {
+    try {
+      const response = await stockAPI.updateStock(menuId, 'increase')
+      
+      // UI 업데이트
+      setStocks(stocks.map(stock => 
+        stock.menuId === menuId ? response.data : stock
+      ))
+    } catch (err) {
+      alert(`재고 증가 실패: ${err.message}`)
+      console.error('재고 증가 실패:', err)
+    }
   }
 
   // 재고 감소
-  const decreaseStock = (menuId) => {
-    setStocks(stocks.map(stock => 
-      stock.id === menuId && stock.stock > 0 
-        ? { ...stock, stock: stock.stock - 1 } 
-        : stock
-    ))
+  const decreaseStock = async (menuId) => {
+    try {
+      const response = await stockAPI.updateStock(menuId, 'decrease')
+      
+      // UI 업데이트
+      setStocks(stocks.map(stock => 
+        stock.menuId === menuId ? response.data : stock
+      ))
+    } catch (err) {
+      alert(`재고 감소 실패: ${err.message}`)
+      console.error('재고 감소 실패:', err)
+    }
   }
 
   // 주문 상태 변경
-  const updateOrderStatus = (orderId) => {
-    setOrders(orders.map(order => {
-      if (order.id === orderId) {
-        if (order.status === 'pending') {
-          return { ...order, status: 'in_progress' }
-        } else if (order.status === 'in_progress') {
-          return { ...order, status: 'completed' }
-        }
+  const updateOrderStatus = async (orderId) => {
+    try {
+      const currentOrder = orders.find(o => o.id === orderId)
+      if (!currentOrder) return
+      
+      let newStatus
+      if (currentOrder.status === 'pending') {
+        newStatus = 'in_progress'
+      } else if (currentOrder.status === 'in_progress') {
+        newStatus = 'completed'
+      } else {
+        return
       }
-      return order
-    }))
+      
+      await orderAPI.updateOrderStatus(orderId, newStatus)
+      
+      // UI 업데이트
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      ))
+      
+      // 통계 업데이트
+      const statsResponse = await orderAPI.getOrderStats()
+      setStats(statsResponse.data)
+    } catch (err) {
+      alert(`주문 상태 변경 실패: ${err.message}`)
+      console.error('주문 상태 변경 실패:', err)
+    }
   }
 
   // 주문 상태 취소 (이전 단계로 되돌리기)
-  const cancelOrderStatus = (orderId) => {
-    setOrders(orders.map(order => {
-      if (order.id === orderId) {
-        if (order.status === 'in_progress') {
-          return { ...order, status: 'pending' }
-        } else if (order.status === 'completed') {
-          return { ...order, status: 'in_progress' }
-        }
+  const cancelOrderStatus = async (orderId) => {
+    try {
+      await orderAPI.cancelOrder(orderId)
+      
+      // UI 업데이트
+      const currentOrder = orders.find(o => o.id === orderId)
+      let newStatus
+      if (currentOrder.status === 'in_progress') {
+        newStatus = 'pending'
+      } else if (currentOrder.status === 'completed') {
+        newStatus = 'in_progress'
+      } else {
+        return
       }
-      return order
-    }))
+      
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      ))
+      
+      // 통계 업데이트
+      const statsResponse = await orderAPI.getOrderStats()
+      setStats(statsResponse.data)
+    } catch (err) {
+      alert(`주문 취소 실패: ${err.message}`)
+      console.error('주문 취소 실패:', err)
+    }
   }
 
-  // 통계 계산
-  const stats = {
-    totalOrders: orders.length,
-    pendingOrders: orders.filter(o => o.status === 'pending').length,
-    inProgressOrders: orders.filter(o => o.status === 'in_progress').length,
-    completedOrders: orders.filter(o => o.status === 'completed').length
+  // 로딩 상태
+  if (loading) {
+    return (
+      <div className="admin-page">
+        <div style={{ textAlign: 'center', padding: '50px', fontSize: '1.2rem' }}>
+          데이터를 불러오는 중...
+        </div>
+      </div>
+    )
+  }
+  
+  // 에러 상태
+  if (error) {
+    return (
+      <div className="admin-page">
+        <div style={{ textAlign: 'center', padding: '50px', color: '#dc3545' }}>
+          <h3>데이터를 불러오는데 실패했습니다</h3>
+          <p>{error}</p>
+          <button 
+            onClick={fetchData}
+            style={{ 
+              padding: '10px 20px', 
+              backgroundColor: '#007bff', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '5px',
+              cursor: 'pointer',
+              marginTop: '20px'
+            }}
+          >
+            다시 시도
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
