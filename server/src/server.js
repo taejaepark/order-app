@@ -4,7 +4,7 @@ import pool from './config/database.js';
 
 dotenv.config();
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 
 // 서버 시작
 const startServer = async () => {

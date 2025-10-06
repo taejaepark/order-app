@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: order-app-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DB_HOST
+        fromDatabase:
+          name: order-app-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: order-app-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: order-app-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: order-app-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: order-app-db
+          property: password
+      - key: CLIENT_URL
+        value: https://your-frontend-url.onrender.com
+
+databases:
+  - name: order-app-db
+    plan: free
+    databaseName: order_app_db
+    user: order_app_db_user
