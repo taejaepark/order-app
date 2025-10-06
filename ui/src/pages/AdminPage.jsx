@@ -73,6 +73,20 @@ function AdminPage() {
     }))
   }
 
+  // 주문 상태 취소 (이전 단계로 되돌리기)
+  const cancelOrderStatus = (orderId) => {
+    setOrders(orders.map(order => {
+      if (order.id === orderId) {
+        if (order.status === 'in_progress') {
+          return { ...order, status: 'pending' }
+        } else if (order.status === 'completed') {
+          return { ...order, status: 'in_progress' }
+        }
+      }
+      return order
+    }))
+  }
+
   // 통계 계산
   const stats = {
     totalOrders: orders.length,
@@ -92,6 +106,7 @@ function AdminPage() {
       <OrderManagement 
         orders={orders}
         onUpdateStatus={updateOrderStatus}
+        onCancelStatus={cancelOrderStatus}
       />
     </div>
   )

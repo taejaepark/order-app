@@ -1,6 +1,6 @@
 import './OrderManagement.css'
 
-function OrderManagement({ orders, onUpdateStatus }) {
+function OrderManagement({ orders, onUpdateStatus, onCancelStatus }) {
   // 날짜 포맷팅
   const formatDateTime = (isoString) => {
     const date = new Date(isoString)
@@ -15,11 +15,11 @@ function OrderManagement({ orders, onUpdateStatus }) {
   const getStatusButton = (status) => {
     switch (status) {
       case 'pending':
-        return { text: '제조 시작', className: 'status-pending' }
+        return { text: '제조 시작', className: 'status-pending', disabled: false }
       case 'in_progress':
-        return { text: '제조 완료', className: 'status-in-progress' }
+        return { text: '제조 완료', className: 'status-in-progress', disabled: false }
       case 'completed':
-        return { text: '완료됨', className: 'status-completed', disabled: true }
+        return { text: '완료', className: 'status-completed', disabled: true }
       default:
         return { text: '알 수 없음', className: '', disabled: true }
     }
@@ -82,13 +82,32 @@ function OrderManagement({ orders, onUpdateStatus }) {
 
                 <div className="order-footer">
                   <span className="order-price">{order.totalPrice.toLocaleString()}원</span>
-                  <button 
-                    className={`order-status-btn ${statusButton.className}`}
-                    onClick={() => onUpdateStatus(order.id)}
-                    disabled={statusButton.disabled}
-                  >
-                    {statusButton.text}
-                  </button>
+                  <div className="order-actions">
+                    <button 
+                      className={`order-status-btn ${statusButton.className}`}
+                      onClick={() => onUpdateStatus(order.id)}
+                      disabled={statusButton.disabled}
+                      title={
+                        order.status === 'pending' ? '제조를 시작합니다' :
+                        order.status === 'in_progress' ? '제조를 완료합니다' :
+                        '이미 완료된 주문입니다'
+                      }
+                    >
+                      {statusButton.text}
+                    </button>
+                    {(order.status === 'in_progress' || order.status === 'completed') && (
+                      <button 
+                        className="order-cancel-btn"
+                        onClick={() => onCancelStatus(order.id)}
+                        title={
+                          order.status === 'in_progress' ? '주문 접수로 되돌립니다' :
+                          '제조 중으로 되돌립니다'
+                        }
+                      >
+                        취소
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )
